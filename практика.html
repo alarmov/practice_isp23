@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CS2ServerManager – управление серверами CS2</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: #0b0e14;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+            color: #e0e6ed;
+            line-height: 1.5;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        a { color: #6cb4ee; text-decoration: none; }
+        a:hover { color: #8fcbff; }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #141a24;
+            border-radius: 24px;
+            padding: 20px 28px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+            border: 1px solid #2a3344;
+        }
+
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0 20px 0;
+            border-bottom: 1px solid #2a3344;
+        }
+        .logo {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(135deg, #6cb4ee, #3d8ecf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .logo span { font-weight: 300; -webkit-text-fill-color: #8a9bb5; }
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            align-items: center;
+        }
+        .nav a {
+            font-weight: 500;
+            padding: 6px 12px;
+            border-radius: 30px;
+            transition: 0.2s;
+            color: #b0c4db;
+        }
+        .nav a:hover {
+            background: #2a3344;
+            color: #fff;
+        }
+        .nav a.active {
+            background: #1f7bc7;
+            color: #fff;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #b0c4db;
+        }
+        .user-info .role-badge {
+            background: #2a3344;
+            padding: 2px 12px;
+            border-radius: 30px;
+            font-size: 13px;
+        }
+        .btn {
+            background: #1f7bc7;
+            border: none;
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn:hover { background: #2a8edb; }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #2a3344;
+            color: #b0c4db;
+        }
+        .btn-outline:hover { background: #2a3344; }
+        .btn-danger { background: #b13e3e; }
+        .btn-danger:hover { background: #cc4a4a; }
+        .btn-sm { padding: 4px 14px; font-size: 14px; }
+
+        .page { display: none; margin-top: 24px; }
+        .page.active { display: block; }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px 20px;
+            align-items: center;
+            background: #1a222e;
+            padding: 16px 20px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+        }
+        .filters label { font-weight: 500; color: #b0c4db; }
+        .filters select, .filters input {
+            background: #0f151e;
+            border: 1px solid #2a3344;
+            color: #e0e6ed;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 14px;
+            outline: none;
+        }
+        .filters select:focus, .filters input:focus {
+            border-color: #1f7bc7;
+        }
+        .filters .search-group {
+            display: flex;
+            gap: 6px;
+            flex: 1 1 260px;
+        }
+        .filters .search-group input {
+            flex: 1;
+            min-width: 140px;
+        }
+        .filters .btn {
+            padding: 6px 18px;
+            font-size: 14px;
+        }
+
+        .server-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 12px;
+        }
+        .server-card {
+            background: #1a222e;
+            border-radius: 16px;
+            padding: 18px 20px;
+            border-left: 4px solid #3d8ecf;
+            transition: 0.2s;
+            position: relative;
+        }
+        .server-card:hover { background: #212c3c; }
+        .server-card .status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status.online { background: #4caf50; box-shadow: 0 0 8px #4caf50; }
+        .status.offline { background: #b13e3e; box-shadow: 0 0 8px #b13e3e; }
+        .server-card .name {
+            font-size: 20px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .server-card .details {
+            margin-top: 10px;
+            font-size: 15px;
+            color: #b0c4db;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 12px;
+        }
+        .server-card .details .label { font-weight: 500; color: #8a9bb5; }
+        .server-card .actions {
+            margin-top: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .server-card .actions .btn {
+            font-size: 13px;
+            padding: 4px 14px;
+        }
+        .favorite-btn {
+            background: none;
+            border: none;
+            color: #b0c4db;
+            font-size: 22px;
+            cursor: pointer;
+            position: absolute;
+            top: 12px;
+            right: 16px;
+        }
+        .favorite-btn.active { color: #f7c948; }
+
+        .auth-form {
+            max-width: 420px;
+            margin: 30px auto;
+            background: #1a222e;
+            padding: 30px 32px;
+            border-radius: 20px;
+        }
+        .auth-form h2 { margin-bottom: 20px; text-align: center; }
+        .auth-form label {
+            display: block;
+            margin-top: 16px;
+            font-weight: 500;
+            color: #b0c4db;
+        }
+        .auth-form input {
+            width: 100%;
+            padding: 10px 16px;
+            background: #0f151e;
+            border: 1px solid #2a3344;
+            border-radius: 30px;
+            color: #e0e6ed;
+            font-size: 15px;
+            margin-top: 4px;
+        }
+        .auth-form input:focus { border-color: #1f7bc7; outline: none; }
+        .auth-form .btn {
+            width: 100%;
+            margin-top: 24px;
+            padding: 12px;
+            font-size: 16px;
+        }
+        .auth-form .switch-link {
+            text-align: center;
+            margin-top: 16px;
+            color: #b0c4db;
+        }
+        .auth-form .switch-link a { font-weight: 600; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(6px);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: #1a222e;
+            max-width: 520px;
+            width: 90%;
+            padding: 30px 32px;
+            border-radius: 24px;
+            border: 1px solid #2a3344;
+        }
+        .modal h2 { margin-bottom: 20px; }
+        .modal label {
+            display: block;
+            margin-top: 14px;
+            font-weight: 500;
+            color: #b0c4db;
+        }
+        .modal input, .modal select {
+            width: 100%;
+            padding: 8px 14px;
+            background: #0f151e;
+            border: 1px solid #2a3344;
+            border-radius: 30px;
+            color: #e0e6ed;
+            margin-top: 4px;
+        }
+        .modal .btn-row {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            justify-content: flex-end;
+        }
+        .modal .btn-row .btn { width: auto; }
+
+        .about {
+            padding: 20px 0;
+        }
+        .about h2 { margin-bottom: 16px; }
+        .about p { margin-bottom: 12px; color: #b0c4db; }
+        .about .stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin: 24px 0;
+        }
+        .about .stats div {
+            background: #1a222e;
+            padding: 14px 28px;
+            border-radius: 30px;
+            border-left: 4px solid #1f7bc7;
+        }
+
+        @media (max-width: 700px) {
+            .container { padding: 16px; }
+            .header { flex-direction: column; align-items: stretch; gap: 12px; }
+            .nav { justify-content: center; gap: 10px; }
+            .filters { flex-direction: column; align-items: stretch; }
+            .server-grid { grid-template-columns: 1fr; }
+            .server-card .details { grid-template-columns: 1fr; }
+            .auth-form { padding: 20px; }
+        }
+
+        .text-muted { color: #8a9bb5; }
+        .mt-20 { margin-top: 20px; }
+        .mb-12 { margin-bottom: 12px; }
+        .flex { display: flex; align-items: center; gap: 8px; }
+        .gap-8 { gap: 8px; }
+        .wrap { flex-wrap: wrap; }
+        .text-center { text-align: center; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- ШАПКА -->
+    <header class="header">
+        <div class="logo">CS2<span>ServerManager</span></div>
+        <nav class="nav" id="mainNav">
+            <a href="#" data-page="home" class="active">Серверы</a>
+            <a href="#" data-page="search">Поиск и фильтры</a>
+            <a href="#" data-page="auth">Вход</a>
+            <a href="#" data-page="about">О нас</a>
+            <a href="#" data-page="admin" id="adminLink" style="display:none;">Админ-панель</a>
+        </nav>
+        <div class="user-info" id="userInfo">
+            <span id="userNameDisplay">Гость</span>
+            <span class="role-badge" id="userRoleBadge">user</span>
+            <button class="btn btn-sm btn-outline" id="logoutBtn" style="display:none;">Выйти</button>
+        </div>
+    </header>
+
+    <!-- СТРАНИЦЫ -->
+    <section class="page active" id="page-home">
+        <h2 class="mb-12">Активные серверы CS2</h2>
+        <div class="filters" id="filterBarHome">
+            <div class="search-group">
+                <input type="text" id="searchInputHome" placeholder="Поиск по названию или IP..." />
+                <button class="btn" id="searchBtnHome">Найти</button>
+            </div>
+            <label>Статус:
+                <select id="statusFilterHome"><option value="">Все</option><option value="online">Онлайн</option><option value="offline">Оффлайн</option></select>
+            </label>
+            <label>Карта:
+                <select id="mapFilterHome"><option value="">Все</option></select>
+            </label>
+            <label>Режим:
+                <select id="modeFilterHome"><option value="">Все</option></select>
+            </label>
+            <label>Регион:
+                <select id="regionFilterHome"><option value="">Все</option></select>
+            </label>
+            <button class="btn btn-outline" id="resetFiltersHome">Сбросить</button>
+        </div>
+        <div id="serverGridContainer" class="server-grid"></div>
+        <div class="text-muted mt-20" id="serverCount"></div>
+    </section>
+
+    <section class="page" id="page-search">
+        <h2 class="mb-12">Расширенный поиск</h2>
+        <div class="filters" id="filterBarSearch">
+            <div class="search-group">
+                <input type="text" id="searchInputSearch" placeholder="Название или IP..." />
+                <button class="btn" id="searchBtnSearch">Найти</button>
+            </div>
+            <label>Статус:
+                <select id="statusFilterSearch"><option value="">Все</option><option value="online">Онлайн</option><option value="offline">Оффлайн</option></select>
+            </label>
+            <label>Карта:
+                <select id="mapFilterSearch"><option value="">Все</option></select>
+            </label>
+            <label>Режим:
+                <select id="modeFilterSearch"><option value="">Все</option></select>
+            </label>
+            <label>Регион:
+                <select id="regionFilterSearch"><option value="">Все</option></select>
+            </label>
+            <button class="btn btn-outline" id="resetFiltersSearch">Сбросить</button>
+        </div>
+        <div id="serverGridSearch" class="server-grid"></div>
+        <div class="text-muted mt-20" id="searchResultCount"></div>
+    </section>
+
+    <section class="page" id="page-auth">
+        <div id="authContainer">
+            <div id="loginForm" class="auth-form">
+                <h2>Вход</h2>
+                <label>Логин</label>
+                <input type="text" id="loginLogin" placeholder="Ваш логин" />
+                <label>Пароль</label>
+                <input type="password" id="loginPassword" placeholder="Пароль" />
+                <button class="btn" id="loginBtn">Войти</button>
+                <div class="switch-link">Нет аккаунта? <a href="#" id="showRegisterLink">Зарегистрируйтесь</a></div>
+            </div>
+            <div id="registerForm" class="auth-form" style="display:none;">
+                <h2>Регистрация</h2>
+                <label>Логин</label>
+                <input type="text" id="regLogin" placeholder="Придумайте логин" />
+                <label>Email</label>
+                <input type="email" id="regEmail" placeholder="example@mail.com" />
+                <label>Пароль (мин. 6 символов)</label>
+                <input type="password" id="regPassword" placeholder="Пароль" />
+                <label>Подтвердите пароль</label>
+                <input type="password" id="regPasswordConfirm" placeholder="Повторите пароль" />
+                <button class="btn" id="registerBtn">Зарегистрироваться</button>
+                <div class="switch-link">Уже есть аккаунт? <a href="#" id="showLoginLink">Войдите</a></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="page" id="page-about">
+        <div class="about">
+            <h2>О проекте CS2ServerManager</h2>
+            <p>Это веб-приложение создано для удобного мониторинга и управления игровыми серверами Counter‑Strike 2.</p>
+            <div class="stats">
+                <div><span class="label">Онлайн:</span> <span id="onlineCount">0</span> серверов</div>
+                <div><span class="label">Всего:</span> <span id="totalCount">0</span> серверов</div>
+                <div><span class="label">Игроков:</span> <span id="playerCount">0</span></div>
+            </div>
+            <p><strong>Разработчик:</strong> Савин Ярослав Дмитриевич, группа ИСП-23</p>
+            <p><strong>Технологии:</strong> HTML, CSS, JavaScript (localStorage)</p>
+            <p>© 2026 ЭТИ (филиал) СГТУ имени Гагарина Ю.А.</p>
+        </div>
+    </section>
+
+    <section class="page" id="page-admin">
+        <h2 class="mb-12">Администрирование серверов</h2>
+        <button class="btn mb-12" id="addServerBtn">Добавить сервер</button>
+        <div id="adminServerList" class="server-grid"></div>
+    </section>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО -->
+<div class="modal-overlay" id="serverModal">
+    <div class="modal">
+        <h2 id="modalTitle">Добавить сервер</h2>
+        <input type="hidden" id="editServerId" />
+        <label>Название сервера</label>
+        <input type="text" id="modalName" placeholder="Мой сервер" />
+        <label>IP-адрес</label>
+        <input type="text" id="modalIp" placeholder="192.168.1.1" />
+        <label>Порт</label>
+        <input type="number" id="modalPort" placeholder="27015" />
+        <label>Карта</label>
+        <input type="text" id="modalMap" placeholder="de_dust2" />
+        <label>Игровой режим</label>
+        <input type="text" id="modalMode" placeholder="Competitive" />
+        <label>Макс. игроков</label>
+        <input type="number" id="modalMaxPlayers" placeholder="10" />
+        <label>Регион</label>
+        <input type="text" id="modalRegion" placeholder="EU" />
+        <label>Пароль (если есть)</label>
+        <input type="text" id="modalPassword" placeholder="(необязательно)" />
+        <div class="btn-row">
+            <button class="btn btn-outline" id="modalCancelBtn">Отмена</button>
+            <button class="btn" id="modalSaveBtn">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    "use strict";
+
+    class Server {
+        constructor(id, name, ip, port, map, mode, maxPlayers, region, password = '') {
+            this.id = id;
+            this.name = name;
+            this.ip = ip;
+            this.port = port;
+            this.map = map;
+            this.mode = mode;
+            this.maxPlayers = maxPlayers;
+            this.region = region;
+            this.password = password;
+            this.currentPlayers = Math.floor(Math.random() * maxPlayers);
+            this.status = Math.random() > 0.2 ? 'online' : 'offline';
+            this.ping = Math.floor(20 + Math.random() * 80);
+        }
+    }
+
+    const Storage = {
+        getServers() {
+            const data = localStorage.getItem('cs2_servers');
+            return data ? JSON.parse(data) : [];
+        },
+        saveServers(servers) {
+            localStorage.setItem('cs2_servers', JSON.stringify(servers));
+        },
+        getUsers() {
+            const data = localStorage.getItem('cs2_users');
+            return data ? JSON.parse(data) : [];
+        },
+        saveUsers(users) {
+            localStorage.setItem('cs2_users', JSON.stringify(users));
+        },
+        getCurrentUser() {
+            const data = sessionStorage.getItem('cs2_current_user');
+            return data ? JSON.parse(data) : null;
+        },
+        setCurrentUser(user) {
+            sessionStorage.setItem('cs2_current_user', JSON.stringify(user));
+        },
+        clearCurrentUser() {
+            sessionStorage.removeItem('cs2_current_user');
+        }
+    };
+
+    function initTestData() {
+        let servers = Storage.getServers();
+        if (servers.length === 0) {
+            const maps = ['de_dust2', 'de_mirage', 'de_inferno', 'de_nuke', 'de_ancient', 'de_vertigo'];
+            const modes = ['Competitive', 'Casual', 'Deathmatch', 'Wingman', 'Arms Race'];
+            const regions = ['EU', 'NA', 'ASIA', 'RU', 'SA'];
+            const names = ['ProPug', 'NoobSlayer', 'AimLab', 'Retake', 'DM FFA', '10v10 Fun', 'ESL Pro', 'Faceit Style'];
+            const testServers = [];
+            for (let i = 0; i < 12; i++) {
+                const map = maps[Math.floor(Math.random() * maps.length)];
+                const mode = modes[Math.floor(Math.random() * modes.length)];
+                const region = regions[Math.floor(Math.random() * regions.length)];
+                const name = names[Math.floor(Math.random() * names.length)] + ' #' + (i+1);
+                const maxP = 10 + Math.floor(Math.random() * 10) * 2;
+                const ip = `192.168.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
+                const port = 27015 + i;
+                const server = new Server(Date.now() + i, name, ip, port, map, mode, maxP, region, '');
+                server.currentPlayers = Math.floor(Math.random() * (maxP + 1));
+                server.status = Math.random() > 0.25 ? 'online' : 'offline';
+                server.ping = 20 + Math.floor(Math.random() * 100);
+                testServers.push(server);
+            }
+            Storage.saveServers(testServers);
+        }
+        let users = Storage.getUsers();
+        if (users.length === 0) {
+            users.push({ login: 'admin', email: 'admin@cs2.com', password: 'admin123', role: 'admin', favorites: [] });
+            users.push({ login: 'user', email: 'user@test.com', password: 'user123', role: 'user', favorites: [] });
+            Storage.saveUsers(users);
+        }
+    }
+    initTestData();
+
+    let currentUser = Storage.getCurrentUser();
+
+    function getUniqueValues(servers, key) {
+        const vals = servers.map(s => s[key]).filter(v => v && v.trim() !== '');
+        return [...new Set(vals)].sort();
+    }
+
+    function updateFilterOptions() {
+        const servers = Storage.getServers();
+        const maps = getUniqueValues(servers, 'map');
+        const modes = getUniqueValues(servers, 'mode');
+        const regions = getUniqueValues(servers, 'region');
+
+        ['Home', 'Search'].forEach(p => {
+            ['map', 'mode', 'region'].forEach(key => {
+                const sel = document.getElementById(key + 'Filter' + p);
+                if (sel) {
+                    const current = sel.value;
+                    const options = key === 'map' ? maps : key === 'mode' ? modes : regions;
+                    sel.innerHTML = '<option value="">Все</option>' + options.map(v => `<option value="${v}">${v}</option>`).join('');
+                    if (current) sel.value = current;
+                }
+            });
+        });
+    }
+
+    function renderServers(servers, containerId, countId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (servers.length === 0) {
+            container.innerHTML = '<div class="text-muted" style="padding: 30px; text-align:center;">Серверов не найдено</div>';
+            if (countId) document.getElementById(countId).textContent = 'Найдено: 0';
+            return;
+        }
+
+        let html = '';
+        const isAdmin = currentUser && currentUser.role === 'admin';
+
+        servers.forEach(s => {
+            const fav = (currentUser && currentUser.favorites && currentUser.favorites.includes(s.id.toString())) ? 'active' : '';
+            html += `
+                <div class="server-card" data-id="${s.id}">
+                    <button class="favorite-btn ${fav}" data-id="${s.id}">${fav ? '★' : '☆'}</button>
+                    <div class="name">
+                        <span class="status ${s.status}"></span>
+                        ${s.name}
+                    </div>
+                    <div class="details">
+                        <span><span class="label">Карта:</span> ${s.map}</span>
+                        <span><span class="label">Режим:</span> ${s.mode}</span>
+                        <span><span class="label">Игроки:</span> ${s.currentPlayers}/${s.maxPlayers}</span>
+                        <span><span class="label">Пинг:</span> ${s.ping} мс</span>
+                        <span><span class="label">Регион:</span> ${s.region}</span>
+                        <span><span class="label">IP:</span> ${s.ip}:${s.port}</span>
+                    </div>
+                    ${s.password ? '<div class="text-muted" style="font-size:13px;"><span class="label">Пароль:</span> есть</div>' : ''}
+                    <div class="actions">
+                        ${isAdmin ? `
+                            <button class="btn btn-sm btn-outline edit-server" data-id="${s.id}">Изменить</button>
+                            <button class="btn btn-sm btn-danger delete-server" data-id="${s.id}">Удалить</button>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+        if (countId) document.getElementById(countId).textContent = `Найдено: ${servers.length}`;
+        updateAboutStats();
+    }
+
+    function updateAboutStats() {
+        const servers = Storage.getServers();
+        const online = servers.filter(s => s.status === 'online');
+        const players = online.reduce((sum, s) => sum + (s.currentPlayers || 0), 0);
+        document.getElementById('onlineCount').textContent = online.length;
+        document.getElementById('totalCount').textContent = servers.length;
+        document.getElementById('playerCount').textContent = players;
+    }
+
+    function applyFilters(servers, filters) {
+        return servers.filter(s => {
+            if (filters.status && s.status !== filters.status) return false;
+            if (filters.map && s.map !== filters.map) return false;
+            if (filters.mode && s.mode !== filters.mode) return false;
+            if (filters.region && s.region !== filters.region) return false;
+            if (filters.search) {
+                const q = filters.search.toLowerCase();
+                return s.name.toLowerCase().includes(q) || (s.ip && s.ip.includes(q));
+            }
+            return true;
+        });
+    }
+
+    function getFiltersFromUI(prefix) {
+        return {
+            status: document.getElementById('statusFilter' + prefix)?.value || '',
+            map: document.getElementById('mapFilter' + prefix)?.value || '',
+            mode: document.getElementById('modeFilter' + prefix)?.value || '',
+            region: document.getElementById('regionFilter' + prefix)?.value || '',
+            search: document.getElementById('searchInput' + prefix)?.value?.trim() || ''
+        };
+    }
+
+    function refreshHome() {
+        const filters = getFiltersFromUI('Home');
+        const all = Storage.getServers();
+        const filtered = applyFilters(all, filters);
+        renderServers(filtered, 'serverGridContainer', 'serverCount');
+    }
+
+    function refreshSearch() {
+        const filters = getFiltersFromUI('Search');
+        const all = Storage.getServers();
+        const filtered = applyFilters(all, filters);
+        renderServers(filtered, 'serverGridSearch', 'searchResultCount');
+    }
+
+    function refreshAdmin() {
+        const all = Storage.getServers();
+        renderServers(all, 'adminServerList', null);
+    }
+
+    function updateUIForUser() {
+        const user = Storage.getCurrentUser();
+        currentUser = user;
+        const nameSpan = document.getElementById('userNameDisplay');
+        const roleSpan = document.getElementById('userRoleBadge');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const adminLink = document.getElementById('adminLink');
+
+        if (user) {
+            nameSpan.textContent = user.login;
+            roleSpan.textContent = user.role === 'admin' ? 'Администратор' : 'Пользователь';
+            logoutBtn.style.display = 'inline-block';
+            adminLink.style.display = user.role === 'admin' ? 'inline-block' : 'none';
+        } else {
+            nameSpan.textContent = 'Гость';
+            roleSpan.textContent = 'user';
+            logoutBtn.style.display = 'none';
+            adminLink.style.display = 'none';
+        }
+        refreshHome();
+        refreshSearch();
+        refreshAdmin();
+    }
+
+    // НАВИГАЦИЯ
+    document.querySelectorAll('.nav a[data-page]').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const pageId = this.dataset.page;
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            document.querySelectorAll('.nav a').forEach(a => a.classList.remove('active'));
+            this.classList.add('active');
+
+            if (pageId === 'home') refreshHome();
+            if (pageId === 'search') refreshSearch();
+            if (pageId === 'admin') refreshAdmin();
+            if (pageId === 'about') updateAboutStats();
+        });
+    });
+
+    // ПОИСК
+    document.getElementById('searchBtnHome').addEventListener('click', refreshHome);
+    document.getElementById('searchInputHome').addEventListener('keyup', e => {
+        if (e.key === 'Enter') refreshHome();
+    });
+
+    document.getElementById('searchBtnSearch').addEventListener('click', refreshSearch);
+    document.getElementById('searchInputSearch').addEventListener('keyup', e => {
+        if (e.key === 'Enter') refreshSearch();
+    });
+
+    // ФИЛЬТРЫ
+    document.getElementById('statusFilterHome').addEventListener('change', refreshHome);
+    document.getElementById('mapFilterHome').addEventListener('change', refreshHome);
+    document.getElementById('modeFilterHome').addEventListener('change', refreshHome);
+    document.getElementById('regionFilterHome').addEventListener('change', refreshHome);
+
+    document.getElementById('statusFilterSearch').addEventListener('change', refreshSearch);
+    document.getElementById('mapFilterSearch').addEventListener('change', refreshSearch);
+    document.getElementById('modeFilterSearch').addEventListener('change', refreshSearch);
+    document.getElementById('regionFilterSearch').addEventListener('change', refreshSearch);
+
+    // СБРОС
+    document.getElementById('resetFiltersHome').addEventListener('click', () => {
+        document.getElementById('searchInputHome').value = '';
+        document.getElementById('statusFilterHome').value = '';
+        document.getElementById('mapFilterHome').value = '';
+        document.getElementById('modeFilterHome').value = '';
+        document.getElementById('regionFilterHome').value = '';
+        refreshHome();
+    });
+
+    document.getElementById('resetFiltersSearch').addEventListener('click', () => {
+        document.getElementById('searchInputSearch').value = '';
+        document.getElementById('statusFilterSearch').value = '';
+        document.getElementById('mapFilterSearch').value = '';
+        document.getElementById('modeFilterSearch').value = '';
+        document.getElementById('regionFilterSearch').value = '';
+        refreshSearch();
+    });
+
+    // АВТОРИЗАЦИЯ - переключение между формами
+    document.getElementById('showRegisterLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('loginForm').style.display = 'none';
+        document.getElementById('registerForm').style.display = 'block';
+    });
+
+    document.getElementById('showLoginLink').addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
+    });
+
+    // РЕГИСТРАЦИЯ
+    document.getElementById('registerBtn').addEventListener('click', function() {
+        const login = document.getElementById('regLogin').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
+        const password = document.getElementById('regPassword').value;
+        const confirm = document.getElementById('regPasswordConfirm').value;
+
+        if (!login || !email || !password || !confirm) {
+            alert('Пожалуйста, заполните все поля!');
+            return;
+        }
+        if (password.length < 6) {
+            alert('Пароль должен содержать минимум 6 символов');
+            return;
+        }
+        if (password !== confirm) {
+            alert('Пароли не совпадают!');
+            return;
+        }
+        if (!email.includes('@')) {
+            alert('Введите корректный email');
+            return;
+        }
+
+        const users = Storage.getUsers();
+        if (users.find(u => u.login === login)) {
+            alert('Пользователь с таким логином уже существует!');
+            return;
+        }
+
+        users.push({ 
+            login: login, 
+            email: email, 
+            password: password, 
+            role: 'user', 
+            favorites: [] 
+        });
+
+        Storage.saveUsers(users);
+        alert('Регистрация успешна! Добро пожаловать, ' + login + '!');
+        
+        // Очистка полей
+        document.getElementById('regLogin').value = '';
+        document.getElementById('regEmail').value = '';
+        document.getElementById('regPassword').value = '';
+        document.getElementById('regPasswordConfirm').value = '';
+        
+        // Переключение на форму входа
+        document.getElementById('loginForm').style.display = 'block';
+        document.getElementById('registerForm').style.display = 'none';
+    });
+
+    // ВХОД
+    document.getElementById('loginBtn').addEventListener('click', function() {
+        const login = document.getElementById('loginLogin').value.trim();
+        const password = document.getElementById('loginPassword').value;
+
+        if (!login || !password) {
+            alert('Введите логин и пароль');
+            return;
+        }
+
+        const users = Storage.getUsers();
+        const user = users.find(u => u.login === login && u.password === password);
+
+        if (!user) {
+            alert('Неверный логин или пароль');
+            return;
+        }
+
+        Storage.setCurrentUser(user);
+        updateUIForUser();
+        alert('Добро пожаловать, ' + login + '!');
+        document.querySelector('.nav a[data-page="home"]').click();
+    });
+
+    // ВЫХОД
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+        Storage.clearCurrentUser();
+        updateUIForUser();
+        alert('Вы вышли из аккаунта');
+        document.querySelector('.nav a[data-page="home"]').click();
+    });
+
+    // ИНИЦИАЛИЗАЦИЯ
+    function init() {
+        updateFilterOptions();
+        updateUIForUser();
+        refreshHome();
+        refreshSearch();
+        refreshAdmin();
+        updateAboutStats();
+    }
+
+    init();
+
+})();
+</script>
+</body>
+</html>
